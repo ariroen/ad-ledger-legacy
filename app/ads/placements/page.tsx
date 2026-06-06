@@ -40,9 +40,14 @@ export default async function PlacementsPage({
           <h1>Размещения</h1>
           <p>Рабочая таблица закупленных рекламных выходов: даты, каналы, менеджеры, статусы, подтверждения и оплаты.</p>
         </div>
-        <Link className="ads-button" href="/ads/campaigns">
-          К кампаниям
-        </Link>
+        <div className="ads-actions">
+          <Link className="ads-button ads-button-primary" href="/ads/placements/new">
+            Создать размещение
+          </Link>
+          <Link className="ads-button" href="/ads/campaigns">
+            К кампаниям
+          </Link>
+        </div>
         <form className="ads-filter">
           <select name="campaignId" defaultValue={params.campaignId ?? ""}>
             <option value="">Все кампании</option>
