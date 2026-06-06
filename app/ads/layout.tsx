@@ -1,17 +1,15 @@
 import Link from "next/link";
-import { BarChart3, CalendarDays, CreditCard, History, Inbox, Network, ShieldCheck, Table2 } from "lucide-react";
+import { BarChart3, CalendarDays, CreditCard, Settings, Table2, Users } from "lucide-react";
 import { getCurrentUser } from "@/lib/ads/auth";
 
 const nav = [
-  { href: "/ads", label: "Дашборд", icon: BarChart3 },
+  { href: "/ads", label: "Обзор", icon: BarChart3 },
+  { href: "/ads/calendar", label: "Выходы", icon: CalendarDays },
   { href: "/ads/placements", label: "Размещения", icon: Table2 },
-  { href: "/ads/networks", label: "Сетки", icon: Network },
-  { href: "/ads/telegram", label: "Telegram", icon: Inbox },
+  { href: "/ads/managers", label: "Менеджеры", icon: Users },
   { href: "/ads/finance", label: "Финансы", icon: CreditCard },
-  { href: "/ads/calendar", label: "Календарь", icon: CalendarDays },
   { href: "/ads/reports", label: "Отчёты", icon: CalendarDays },
-  { href: "/ads/audit", label: "Audit", icon: History },
-  { href: "/ads/backups", label: "Backups", icon: ShieldCheck },
+  { href: "/ads/service", label: "Сервис", icon: Settings },
 ];
 
 export default async function AdsLayout({ children }: { children: React.ReactNode }) {
@@ -26,7 +24,7 @@ export default async function AdsLayout({ children }: { children: React.ReactNod
       <aside className="ads-sidebar">
         <div className="ads-brand">
           <span>Ad Ledger</span>
-          <small>единый учёт рекламы</small>
+          <small>Контроль рекламных размещений</small>
         </div>
         <nav className="ads-nav">
           {nav.map((item) => {
