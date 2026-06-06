@@ -2,6 +2,9 @@ import { getTelegramInbox } from "@/lib/ads/queries";
 import { dateTime } from "@/lib/ads/format";
 import { requireUser } from "@/lib/ads/auth";
 
+type TelegramMessageItem = Awaited<ReturnType<typeof getTelegramInbox>>[number];
+type ProposedChangeItem = TelegramMessageItem["proposedChanges"][number];
+
 export default async function TelegramPage() {
   await requireUser();
   const messages = await getTelegramInbox();
@@ -19,7 +22,7 @@ export default async function TelegramPage() {
         </form>
       </header>
       <section className="ads-panel ads-inbox">
-        {messages.map((message) => {
+        {messages.map((message: TelegramMessageItem) => {
           const actions = message.suggestedActions ? JSON.parse(message.suggestedActions) as string[] : [];
           return (
             <article key={message.id} className="ads-message">
@@ -46,7 +49,7 @@ export default async function TelegramPage() {
                 {actions.map((action) => <span key={action}>{action}</span>)}
               </div>
               <div className="ads-proposals">
-                {message.proposedChanges.map((change) => {
+                {message.proposedChanges.map((change: ProposedChangeItem) => {
                   const payload = JSON.parse(change.payloadJson || "{}") as Record<string, unknown>;
                   return (
                     <div className="ads-proposal" key={change.id}>

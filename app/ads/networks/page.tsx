@@ -2,6 +2,9 @@ import { getNetworks } from "@/lib/ads/queries";
 import { rub } from "@/lib/ads/format";
 import { requireUser } from "@/lib/ads/auth";
 
+type NetworkItem = Awaited<ReturnType<typeof getNetworks>>[number];
+type NetworkChannel = NetworkItem["channels"][number];
+
 export default async function NetworksPage() {
   await requireUser();
   const networks = await getNetworks();
@@ -16,7 +19,7 @@ export default async function NetworksPage() {
         </div>
       </header>
       <section className="ads-card-grid">
-        {networks.map((network) => (
+        {networks.map((network: NetworkItem) => (
           <article className="ads-network-card" key={network.id}>
             <div className="ads-card-head">
               <div>
@@ -31,7 +34,7 @@ export default async function NetworksPage() {
               <span>{network._count.placements} размещений</span>
             </div>
             <ul>
-              {network.channels.slice(0, 8).map((channel) => (
+              {network.channels.slice(0, 8).map((channel: NetworkChannel) => (
                 <li key={channel.id}>
                   <a href={`/ads/channels/${channel.id}`}>{channel.name}</a>
                   {channel.url ? <a className="ads-sub-link" href={channel.url}>внешняя</a> : null}

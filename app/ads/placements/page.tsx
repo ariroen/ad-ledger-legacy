@@ -8,7 +8,6 @@ import { PlacementEditor } from "./PlacementEditor";
 
 type PlacementItem = Awaited<ReturnType<typeof getPlacements>>[number];
 type ManagerItem = Awaited<ReturnType<typeof getManagers>>[number];
-type PlacementProofCount = { placementId: string; _count: number };
 
 export default async function PlacementsPage({
   searchParams,
@@ -23,16 +22,14 @@ export default async function PlacementsPage({
     query: params.q,
   });
   const managers: ManagerItem[] = await getManagers();
-  const proofCounts: PlacementProofCount[] = placements.length
-    ? await prisma.placementProof.groupBy({
-        by: ["placementId"],
+  const proofRows = placements.length
+    ? await prisma.placementProof.findMany({
         where: { placementId: { in: placements.map((placement: PlacementItem) => placement.id) } },
-        _count: true,
+        select: { placementId: true },
+        distinct: ["placementId"],
       })
     : [];
-  const proofMap = new Map<string, number>(
-    proofCounts.map((item: PlacementProofCount) => [item.placementId, item._count]),
-  );
+  const proofSet = new Set(proofRows.map((item: { placementId: string }) => item.placementId));
 
   return (
     <>
@@ -88,7 +85,7 @@ export default async function PlacementsPage({
                 <td>{rub(placement.priceRub)}</td>
                 <td><span className="ads-pill">{placement.status}</span></td>
                 <td>
-                  {(proofMap.get(placement.id) ?? 0) > 0 ? "proof есть" : "нет proof"}
+                  {proofSet.has(placement.id) ? "proof есть" : "нет proof"}
                 </td>
                 <td>
                   <div className="ads-actions">

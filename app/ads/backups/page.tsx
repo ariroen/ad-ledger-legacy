@@ -2,6 +2,8 @@ import { requireAdmin } from "@/lib/ads/auth";
 import { getDashboardBackups } from "@/lib/ads/queries";
 import { dateTime } from "@/lib/ads/format";
 
+type BackupItem = Awaited<ReturnType<typeof getDashboardBackups>>[number];
+
 export default async function BackupsPage() {
   await requireAdmin();
   const backups = await getDashboardBackups();
@@ -22,7 +24,7 @@ export default async function BackupsPage() {
         <table className="ads-table">
           <thead><tr><th>Дата</th><th>Тип</th><th>Статус</th><th>Файл</th><th>Комментарий</th></tr></thead>
           <tbody>
-            {backups.map((backup) => (
+            {backups.map((backup: BackupItem) => (
               <tr key={backup.id}>
                 <td>{dateTime(backup.createdAt)}</td>
                 <td>{backup.kind}</td>

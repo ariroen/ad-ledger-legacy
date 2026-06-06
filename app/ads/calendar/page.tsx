@@ -7,7 +7,6 @@ import { rub } from "@/lib/ads/format";
 type CalendarPlacement = Awaited<ReturnType<typeof getCalendarPlacements>>[number];
 type NetworkOption = Awaited<ReturnType<typeof getNetworksForSelect>>[number];
 type ManagerOption = Awaited<ReturnType<typeof getManagers>>[number];
-type PlacementProofCount = { placementId: string; _count: number };
 type PlacementGroup = {
   dateKey: string;
   title: string;
@@ -63,15 +62,14 @@ export default async function CalendarPage({
     getManagers(),
   ]);
 
-  const proofCounts: PlacementProofCount[] = placements.length
-    ? await prisma.placementProof.groupBy({
-        by: ["placementId"],
+  const proofRows = placements.length
+    ? await prisma.placementProof.findMany({
         where: { placementId: { in: placements.map((placement: CalendarPlacement) => placement.id) } },
-        _count: true,
+        select: { placementId: true },
+        distinct: ["placementId"],
       })
     : [];
-
-  const proofMap = new Map<string, number>(proofCounts.map((item: PlacementProofCount) => [item.placementId, item._count]));
+  const proofSet = new Set(proofRows.map((item: { placementId: string }) => item.placementId));
   const groupedPlacements = placements.reduce<PlacementGroup[]>((groups: PlacementGroup[], placement: CalendarPlacement) => {
     const key = placement.plannedAt ? placement.plannedAt.toISOString().slice(0, 10) : "undated";
     const current = groups.at(-1);
@@ -117,7 +115,7 @@ export default async function CalendarPage({
             </div>
             <div className="ads-list">
               {group.items.map((placement: CalendarPlacement) => {
-                const hasProof = (proofMap.get(placement.id) ?? 0) > 0;
+                const hasProof = proofSet.has(placement.id);
 
                 return (
                   <div className={`ads-list-row ${statusClass[placement.status] ?? ""}`} key={placement.id}>

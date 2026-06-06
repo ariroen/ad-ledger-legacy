@@ -3,9 +3,13 @@ import { requireUser } from "@/lib/ads/auth";
 import { prisma } from "@/lib/ads/db";
 import { rub } from "@/lib/ads/format";
 
-type ManagerWithPlacements = Awaited<ReturnType<typeof prisma.manager.findMany>>[number];
-type ManagerPlacement = ManagerWithPlacements["placements"][number];
-type PlacementProofCount = { placementId: string; _count: number };
+type ManagerPlacement = { id: string; priceRub: number | null; status: string };
+type ManagerWithPlacements = {
+  id: string;
+  name: string;
+  username: string | null;
+  placements: ManagerPlacement[];
+};
 
 export default async function ManagersPage() {
   await requireUser();
@@ -27,16 +31,14 @@ export default async function ManagersPage() {
   const placementIds = managers.flatMap((manager: ManagerWithPlacements) =>
     manager.placements.map((placement: ManagerPlacement) => placement.id),
   );
-  const proofCounts: PlacementProofCount[] = placementIds.length
-    ? await prisma.placementProof.groupBy({
-        by: ["placementId"],
+  const proofRows = placementIds.length
+    ? await prisma.placementProof.findMany({
         where: { placementId: { in: placementIds } },
-        _count: true,
+        select: { placementId: true },
+        distinct: ["placementId"],
       })
     : [];
-  const proofMap = new Map<string, number>(
-    proofCounts.map((item: PlacementProofCount) => [item.placementId, item._count]),
-  );
+  const proofSet = new Set(proofRows.map((item: { placementId: string }) => item.placementId));
 
   return (
     <>
@@ -61,7 +63,7 @@ export default async function ManagersPage() {
             (placement: ManagerPlacement) => placement.status === "требует проверки",
           ).length;
           const withoutProof = manager.placements.filter(
-            (placement: ManagerPlacement) => (proofMap.get(placement.id) ?? 0) === 0,
+            (placement: ManagerPlacement) => !proofSet.has(placement.id),
           ).length;
 
           return (

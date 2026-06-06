@@ -28,7 +28,59 @@ export async function buildAdsExcelExport() {
     prisma.network.findMany({ orderBy: { name: "asc" } }),
     prisma.invoice.findMany({ orderBy: { issuedAt: "desc" } }),
     prisma.payment.findMany({ include: { invoice: true, network: true }, orderBy: { paidAt: "desc" } }),
-  ]);
+  ]) as [
+    Array<{
+      plannedAt: Date | null;
+      actualAt: Date | null;
+      platform: string;
+      network: { name: string } | null;
+      channel: { name: string; url: string | null };
+      manager: { name: string } | null;
+      format: string | null;
+      priceRub: number | null;
+      status: string;
+      postUrl: string | null;
+      referralUrl: string | null;
+      note: string | null;
+      sourceSheet: string | null;
+      sourceRow: number | null;
+    }>,
+    Array<{
+      platform: string;
+      network: { name: string } | null;
+      name: string;
+      url: string | null;
+      statsUrl: string | null;
+      source: string | null;
+    }>,
+    Array<{
+      platform: string;
+      name: string;
+      priceRub: number | null;
+      format: string | null;
+      compositionStatus: string;
+      networkUrl: string | null;
+      source: string | null;
+    }>,
+    Array<{
+      number: string | null;
+      issuedAt: Date | null;
+      contractor: string | null;
+      amountRub: number | null;
+      status: string;
+      filePath: string | null;
+      note: string | null;
+    }>,
+    Array<{
+      paidAt: Date | null;
+      amountRub: number;
+      method: string | null;
+      status: string;
+      invoice: { number: string | null } | null;
+      network: { name: string } | null;
+      note: string | null;
+    }>,
+  ];
 
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(

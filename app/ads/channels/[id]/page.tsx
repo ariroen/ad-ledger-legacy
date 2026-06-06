@@ -3,12 +3,15 @@ import { requireUser } from "@/lib/ads/auth";
 import { getChannelDetail } from "@/lib/ads/queries";
 import { dateTime, rub } from "@/lib/ads/format";
 
+type ChannelDetail = NonNullable<Awaited<ReturnType<typeof getChannelDetail>>>;
+type ChannelPlacement = ChannelDetail["placements"][number];
+
 export default async function ChannelPage({ params }: { params: Promise<{ id: string }> }) {
   await requireUser();
   const { id } = await params;
   const channel = await getChannelDetail(id);
   if (!channel) notFound();
-  const problemCount = channel.placements.filter((placement) => placement.status === "требует проверки").length;
+  const problemCount = channel.placements.filter((placement: ChannelPlacement) => placement.status === "требует проверки").length;
 
   return (
     <>
@@ -25,7 +28,7 @@ export default async function ChannelPage({ params }: { params: Promise<{ id: st
       </header>
       <section className="ads-stats">
         <div className="ads-metric"><strong>{channel.placements.length}</strong><small>размещений</small></div>
-        <div className="ads-metric"><strong>{channel.placements.filter((p) => p.status === "вышло").length}</strong><small>вышло</small></div>
+        <div className="ads-metric"><strong>{channel.placements.filter((p: ChannelPlacement) => p.status === "вышло").length}</strong><small>вышло</small></div>
         <div className="ads-metric ads-metric-warn"><strong>{problemCount}</strong><small>требует проверки</small></div>
       </section>
       <section className="ads-panel">
@@ -33,7 +36,7 @@ export default async function ChannelPage({ params }: { params: Promise<{ id: st
         <table className="ads-table">
           <thead><tr><th>Дата</th><th>Сетка</th><th>Менеджер</th><th>Цена</th><th>Статус</th><th>Proof</th></tr></thead>
           <tbody>
-            {channel.placements.map((placement) => (
+            {channel.placements.map((placement: ChannelPlacement) => (
               <tr key={placement.id}>
                 <td>{dateTime(placement.plannedAt)}</td>
                 <td>{placement.network?.name ?? "—"}</td>

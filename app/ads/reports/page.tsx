@@ -20,18 +20,18 @@ export default async function ReportsPage() {
   }>;
 
   const placementIds = placements.map((placement) => placement.id);
-  const proofGroups =
+  const proofRows =
     placementIds.length > 0
-      ? await prisma.placementProof.groupBy({
-          by: ["placementId"],
+      ? await prisma.placementProof.findMany({
           where: { placementId: { in: placementIds } },
-          _count: { _all: true },
-        }) as Array<{ placementId: string }>
+          select: { placementId: true },
+          distinct: ["placementId"],
+        })
       : [];
 
-  const placementsWithProofSet = new Set(proofGroups.map((item) => item.placementId));
-  const readyForReport = placements.filter((placement) => placementsWithProofSet.has(placement.id));
-  const withoutProof = placements.filter((placement) => !placementsWithProofSet.has(placement.id));
+  const proofSet = new Set(proofRows.map((item: { placementId: string }) => item.placementId));
+  const readyForReport = placements.filter((placement) => proofSet.has(placement.id));
+  const withoutProof = placements.filter((placement) => !proofSet.has(placement.id));
   const requiresCheck = placements.filter((placement) => placement.status === "требует проверки").length;
 
   return (

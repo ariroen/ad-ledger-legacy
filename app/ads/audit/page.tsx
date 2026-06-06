@@ -2,6 +2,8 @@ import { requireAdmin } from "@/lib/ads/auth";
 import { getAuditLogs } from "@/lib/ads/queries";
 import { dateTime } from "@/lib/ads/format";
 
+type AuditLogItem = Awaited<ReturnType<typeof getAuditLogs>>[number];
+
 export default async function AuditPage() {
   await requireAdmin();
   const logs = await getAuditLogs();
@@ -19,7 +21,7 @@ export default async function AuditPage() {
         <table className="ads-table ads-table-dense">
           <thead><tr><th>Дата</th><th>Пользователь</th><th>Действие</th><th>Сущность</th><th>До</th><th>После</th></tr></thead>
           <tbody>
-            {logs.map((log) => (
+            {logs.map((log: AuditLogItem) => (
               <tr key={log.id}>
                 <td>{dateTime(log.createdAt)}</td>
                 <td>{log.actor?.name ?? "system"}</td>
