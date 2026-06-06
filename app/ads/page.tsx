@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlertTriangle, Inbox, RadioTower, Rows3 } from "lucide-react";
+import { AlertTriangle, BriefcaseBusiness, RadioTower, Wallet } from "lucide-react";
 import { ImportControls } from "./actions";
 import { getAdsDashboard } from "@/lib/ads/queries";
 import { dateTime, rub } from "@/lib/ads/format";
@@ -21,10 +21,10 @@ export default async function AdsDashboardPage() {
       </header>
 
       <section className="ads-stats">
-        <Metric label="Размещений всего" value={data.placementsTotal} icon={<RadioTower size={18} />} />
-        <Metric label="Сегодня / ближайшие выходы" value={data.upcoming.length} icon={<Rows3 size={18} />} />
-        <Metric label="Требует проверки" value={data.requiresCheck} icon={<AlertTriangle size={18} />} warn />
-        <Metric label="Telegram в очереди" value={data.pendingTelegram} icon={<Inbox size={18} />} />
+        <Metric label="Активная кампания" value={data.activeCampaign?.name ?? "—"} icon={<BriefcaseBusiness size={18} />} />
+        <Metric label="Бюджет" value={rub(data.activeCampaign?.budgetRub)} icon={<Wallet size={18} />} />
+        <Metric label="Количество размещений" value={data.placementsTotal} icon={<RadioTower size={18} />} />
+        <Metric label="Без proof" value={data.withoutProof} icon={<AlertTriangle size={18} />} warn />
       </section>
 
       <section className="ads-grid-two">
@@ -109,7 +109,7 @@ function Metric({
   warn,
 }: {
   label: string;
-  value: number;
+  value: number | string;
   icon: React.ReactNode;
   warn?: boolean;
 }) {

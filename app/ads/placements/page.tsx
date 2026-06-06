@@ -1,23 +1,28 @@
 import Link from "next/link";
 import { prisma } from "@/lib/ads/db";
-import { getPlacements } from "@/lib/ads/queries";
+import { getCampaignsForSelect, getPlacements } from "@/lib/ads/queries";
 import { dateTime, rub } from "@/lib/ads/format";
 import { requireUser } from "@/lib/ads/auth";
 
 type PlacementItem = Awaited<ReturnType<typeof getPlacements>>[number];
+type CampaignItem = Awaited<ReturnType<typeof getCampaignsForSelect>>[number];
 
 export default async function PlacementsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; platform?: string; q?: string }>;
+  searchParams: Promise<{ campaignId?: string; status?: string; platform?: string; q?: string }>;
 }) {
   await requireUser();
   const params = await searchParams;
-  const placements = await getPlacements({
-    status: params.status,
-    platform: params.platform,
-    query: params.q,
-  });
+  const [placements, campaigns]: [PlacementItem[], CampaignItem[]] = await Promise.all([
+    getPlacements({
+      campaignId: params.campaignId,
+      status: params.status,
+      platform: params.platform,
+      query: params.q,
+    }),
+    getCampaignsForSelect(),
+  ]);
   const proofRows = placements.length
     ? await prisma.placementProof.findMany({
         where: { placementId: { in: placements.map((placement: PlacementItem) => placement.id) } },
@@ -36,6 +41,14 @@ export default async function PlacementsPage({
           <p>Рабочая таблица закупленных рекламных выходов: даты, каналы, менеджеры, статусы, подтверждения и оплаты.</p>
         </div>
         <form className="ads-filter">
+          <select name="campaignId" defaultValue={params.campaignId ?? ""}>
+            <option value="">Все кампании</option>
+            {campaigns.map((campaign: CampaignItem) => (
+              <option key={campaign.id} value={campaign.id}>
+                {campaign.name}
+              </option>
+            ))}
+          </select>
           <input name="q" placeholder="Канал, менеджер" defaultValue={params.q ?? ""} />
           <select name="platform" defaultValue={params.platform ?? ""}>
             <option value="">Все платформы</option>

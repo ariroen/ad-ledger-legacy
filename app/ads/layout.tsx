@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { BarChart3, CalendarDays, CreditCard, Settings, Table2, Users } from "lucide-react";
+import { BarChart3, BriefcaseBusiness, CalendarDays, CreditCard, Settings, Table2, Users } from "lucide-react";
 import { getCurrentUser } from "@/lib/ads/auth";
 
 const nav = [
   { href: "/ads", label: "Обзор", icon: BarChart3 },
+  { href: "/ads/campaigns", label: "Кампании", icon: BriefcaseBusiness },
   { href: "/ads/calendar", label: "Выходы", icon: CalendarDays },
   { href: "/ads/placements", label: "Размещения", icon: Table2 },
   { href: "/ads/managers", label: "Менеджеры", icon: Users },

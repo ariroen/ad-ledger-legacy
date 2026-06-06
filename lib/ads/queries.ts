@@ -1,62 +1,85 @@
 import { prisma } from "./db";
+import { ensureCampaignFoundation } from "./campaigns";
 
 export async function getAdsDashboard() {
+  await ensureCampaignFoundation();
   const today = new Date();
   const weekEnd = new Date(today);
   weekEnd.setUTCDate(today.getUTCDate() + 7);
+  const activeCampaign = await prisma.campaign.findFirst({
+    where: { status: "active" },
+    orderBy: [{ year: "desc" }, { month: "desc" }],
+  });
+  const activeCampaignId = activeCampaign?.id;
 
   const [
     placementsTotal,
-    channelsTotal,
-    networksTotal,
     pendingTelegram,
     requiresCheck,
     upcoming,
     recentPlacements,
     statusGroups,
-    financeGroups,
+    activeCampaignProofRows,
   ] = await Promise.all([
-    prisma.placement.count(),
-    prisma.channel.count(),
-    prisma.network.count(),
+    prisma.placement.count({
+      where: { campaignId: activeCampaignId || undefined },
+    }),
     prisma.telegramMessage.count({ where: { reviewStatus: "pending" } }),
-    prisma.placement.count({ where: { status: "требует проверки" } }),
+    prisma.placement.count({
+      where: { campaignId: activeCampaignId || undefined, status: "требует проверки" },
+    }),
     prisma.placement.findMany({
-      where: { plannedAt: { gte: today, lte: weekEnd } },
-      include: { channel: true, network: true, manager: true },
+      where: {
+        campaignId: activeCampaignId || undefined,
+        plannedAt: { gte: today, lte: weekEnd },
+      },
+      include: { channel: true, network: true, manager: true, campaign: true },
       orderBy: { plannedAt: "asc" },
       take: 12,
     }),
     prisma.placement.findMany({
-      include: { channel: true, network: true, manager: true },
+      where: { campaignId: activeCampaignId || undefined },
+      include: { channel: true, network: true, manager: true, campaign: true },
       orderBy: { plannedAt: "desc" },
       take: 12,
     }),
-    prisma.placement.groupBy({ by: ["status"], _count: true }),
-    prisma.invoice.groupBy({ by: ["status"], _count: true, _sum: { amountRub: true } }),
+    prisma.placement.groupBy({
+      by: ["status"],
+      where: { campaignId: activeCampaignId || undefined },
+      _count: true,
+    }),
+    activeCampaignId
+      ? prisma.placementProof.findMany({
+          where: { placement: { campaignId: activeCampaignId } },
+          select: { placementId: true },
+          distinct: ["placementId"],
+        })
+      : [],
   ]);
 
   return {
+    activeCampaign,
     placementsTotal,
-    channelsTotal,
-    networksTotal,
     pendingTelegram,
     requiresCheck,
     upcoming,
     recentPlacements,
     statusGroups,
-    financeGroups,
+    withoutProof: Math.max(placementsTotal - activeCampaignProofRows.length, 0),
   };
 }
 
 export async function getPlacements(params?: {
+  campaignId?: string;
   status?: string;
   platform?: string;
   query?: string;
 }) {
+  await ensureCampaignFoundation();
   const query = params?.query?.trim();
   return prisma.placement.findMany({
     where: {
+      campaignId: params?.campaignId || undefined,
       status: params?.status || undefined,
       platform: params?.platform || undefined,
       OR: query
@@ -68,9 +91,17 @@ export async function getPlacements(params?: {
           ]
         : undefined,
     },
-    include: { channel: true, network: true, manager: true, proofs: true, payments: true },
+    include: { channel: true, network: true, manager: true, proofs: true, payments: true, campaign: true },
     orderBy: [{ plannedAt: "asc" }, { createdAt: "desc" }],
     take: 300,
+  });
+}
+
+export async function getCampaignsForSelect() {
+  await ensureCampaignFoundation();
+  return prisma.campaign.findMany({
+    select: { id: true, name: true, status: true, month: true, year: true },
+    orderBy: [{ year: "desc" }, { month: "desc" }],
   });
 }
 

@@ -34,6 +34,23 @@ model Manager {
   placements Placement[]
 }
 
+model Campaign {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  month     Int
+  year      Int
+  budgetRub Int      @default(0)
+  status    String   @default("active")
+  note      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  placements Placement[]
+
+  @@index([status])
+  @@index([year, month])
+}
+
 model Network {
   id                String   @id @default(cuid())
   name              String
@@ -101,11 +118,15 @@ model Placement {
   managerId String?
   manager   Manager? @relation(fields: [managerId], references: [id], onDelete: SetNull)
 
+  campaignId String?
+  campaign   Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+
   proofs   PlacementProof[]
   payments Payment[]
   importRunItems ImportRunItem[]
 
   @@unique([channelId, plannedAt, platform, networkId, postNumber])
+  @@index([campaignId])
   @@index([plannedAt])
   @@index([status])
 }
