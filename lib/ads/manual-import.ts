@@ -1,5 +1,6 @@
 import { prisma } from "./db";
 import { ensureCampaignFoundation } from "./campaigns";
+import { bulkCreatePlacements, createPlacement } from "./placements-service";
 import { detectPlatform, normalizeChannelName, normalizeText, normalizeUrl, parseSheetDate } from "./normalize";
 
 type CampaignOption = {
@@ -325,51 +326,40 @@ async function resolveManager(name: string | null) {
 
 export async function saveManualImportEntries(entries: SaveEntryInput[]) {
   await ensureCampaignFoundation();
-  let savedCount = 0;
-
-  for (const entry of entries) {
-    if (!entry.campaignId || !entry.channelName || !entry.plannedAtIso) continue;
-
-    const channel = await resolveChannel(entry);
-    const manager = await resolveManager(entry.managerName);
-    const plannedAt = new Date(entry.plannedAtIso);
-    const existingPlacement = await prisma.placement.findFirst({
-      where: {
-        campaignId: entry.campaignId,
-        channelId: channel.id,
-        plannedAt,
-        platform: entry.platform,
-      },
-    });
-
-    if (existingPlacement) continue;
-
-    const placement = await prisma.placement.create({
-      data: {
-        campaignId: entry.campaignId,
-        channelId: channel.id,
-        managerId: manager?.id ?? null,
-        plannedAt,
-        platform: entry.platform,
-        status: entry.status || "запланировано",
-        postUrl: entry.postUrl,
-        note: entry.note,
-      },
-    });
-
-    if (entry.proofUrl || entry.proofNote) {
-      await prisma.placementProof.create({
-        data: {
-          placementId: placement.id,
-          kind: entry.proofUrl ? "link" : "note",
-          url: entry.proofUrl,
-          note: entry.proofNote,
-        },
-      });
+  if (entries.length === 1) {
+    const [entry] = entries;
+    if (!entry.campaignId || !entry.channelName || !entry.plannedAtIso) {
+      return { savedCount: 0 };
     }
-
-    savedCount += 1;
+    await createPlacement({
+      campaignId: entry.campaignId,
+      plannedAt: entry.plannedAtIso,
+      platform: entry.platform,
+      channelName: entry.channelName,
+      channelUrl: entry.channelUrl,
+      managerName: entry.managerName,
+      priceRub: null,
+      status: entry.status,
+      postUrl: entry.postUrl,
+      note: entry.note,
+    });
+    return { savedCount: 1 };
   }
 
-  return { savedCount };
+  const result = await bulkCreatePlacements({
+    rows: entries.map((entry) => ({
+      plannedAt: entry.plannedAtIso,
+      platform: entry.platform,
+      channelName: entry.channelName,
+      channelUrl: entry.channelUrl,
+      managerName: entry.managerName,
+      status: entry.status,
+      postUrl: entry.postUrl,
+      note: entry.note,
+      proofUrl: entry.proofUrl,
+      proofNote: entry.proofNote,
+    })),
+  });
+
+  return { savedCount: result.created };
 }

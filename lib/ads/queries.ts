@@ -213,15 +213,22 @@ export async function getPlacements(params?: {
   campaignId?: string;
   status?: string;
   platform?: string;
+  date?: string;
+  managerId?: string;
   query?: string;
 }) {
   await ensureCampaignFoundation();
   const query = params?.query?.trim();
+  const date = params?.date?.trim();
+  const dateStart = date ? new Date(`${date}T00:00:00.000Z`) : null;
+  const dateEnd = date ? new Date(`${date}T23:59:59.999Z`) : null;
   return prisma.placement.findMany({
     where: {
       campaignId: params?.campaignId || undefined,
       status: params?.status || undefined,
       platform: params?.platform || undefined,
+      managerId: params?.managerId || undefined,
+      plannedAt: dateStart && dateEnd ? { gte: dateStart, lte: dateEnd } : undefined,
       OR: query
         ? [
             { channel: { name: { contains: query } } },

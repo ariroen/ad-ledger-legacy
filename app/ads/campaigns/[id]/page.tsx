@@ -28,6 +28,9 @@ export default async function CampaignDetailPage({ params }: CampaignDetailPageP
           <Link className="ads-button" href="/ads/campaigns">
             Назад к кампаниям
           </Link>
+          <Link className="ads-button ads-button-primary" href={`/ads/placements/new?campaignId=${campaign.id}`}>
+            Добавить размещение
+          </Link>
           <Link className="ads-button" href={`/ads/placements?campaignId=${campaign.id}`}>
             Все размещения кампании
           </Link>
