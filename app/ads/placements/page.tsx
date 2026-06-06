@@ -3,11 +3,8 @@ import { prisma } from "@/lib/ads/db";
 import { getPlacements } from "@/lib/ads/queries";
 import { dateTime, rub } from "@/lib/ads/format";
 import { requireUser } from "@/lib/ads/auth";
-import { getManagers } from "@/lib/ads/queries";
-import { PlacementEditor } from "./PlacementEditor";
 
 type PlacementItem = Awaited<ReturnType<typeof getPlacements>>[number];
-type ManagerItem = Awaited<ReturnType<typeof getManagers>>[number];
 
 export default async function PlacementsPage({
   searchParams,
@@ -21,7 +18,6 @@ export default async function PlacementsPage({
     platform: params.platform,
     query: params.q,
   });
-  const managers: ManagerItem[] = await getManagers();
   const proofRows = placements.length
     ? await prisma.placementProof.findMany({
         where: { placementId: { in: placements.map((placement: PlacementItem) => placement.id) } },
@@ -77,8 +73,7 @@ export default async function PlacementsPage({
               <tr key={placement.id}>
                 <td>{dateTime(placement.plannedAt)}</td>
                 <td>
-                  <Link href={`/ads/channels/${placement.channel.id}`}>{placement.channel.name}</Link>
-                  {placement.channel.url ? <a className="ads-sub-link" href={placement.channel.url}>внешняя</a> : null}
+                  {placement.channel.name}
                 </td>
                 <td>{placement.manager?.name ?? "—"}</td>
                 <td>{placement.platform}</td>
@@ -88,17 +83,9 @@ export default async function PlacementsPage({
                   {proofSet.has(placement.id) ? "proof есть" : "нет proof"}
                 </td>
                 <td>
-                  <div className="ads-actions">
-                    <Link className="ads-button" href={`/ads/channels/${placement.channel.id}`}>
-                      Открыть
-                    </Link>
-                  </div>
-                  <PlacementEditor placement={placement} managers={managers} />
-                  <form className="ads-proof-form" action={`/api/ads/placements/${placement.id}/proofs`} method="post" encType="multipart/form-data">
-                    <input name="url" placeholder="ссылка/skrin" />
-                    <input name="file" type="file" />
-                    <button className="ads-button" type="submit">Proof</button>
-                  </form>
+                  <Link className="ads-button" href={`/ads/placements/${placement.id}`}>
+                    Открыть
+                  </Link>
                 </td>
               </tr>
             ))}
