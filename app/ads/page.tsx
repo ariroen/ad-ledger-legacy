@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlertTriangle, Inbox, Network, RadioTower } from "lucide-react";
+import { AlertTriangle, Inbox, RadioTower, Rows3 } from "lucide-react";
 import { ImportControls } from "./actions";
 import { getAdsDashboard } from "@/lib/ads/queries";
 import { dateTime, rub } from "@/lib/ads/format";
@@ -13,19 +13,18 @@ export default async function AdsDashboardPage() {
     <>
       <header className="ads-header">
         <div>
-          <p className="ads-kicker">Операционный центр</p>
-          <h1>Рекламный кабинет</h1>
-          <p>Размещения, сетки, Telegram-входящие, счета и отчёты в одной SQLite-базе.</p>
+          <p className="ads-kicker">Ad Ledger</p>
+          <h1>Обзор рекламы</h1>
+          <p>Контроль выходов, подтверждений, оплат и проблемных размещений.</p>
         </div>
         <ImportControls />
       </header>
 
       <section className="ads-stats">
-        <Metric label="Размещений" value={data.placementsTotal} icon={<RadioTower size={18} />} />
-        <Metric label="Каналов" value={data.channelsTotal} icon={<Network size={18} />} />
-        <Metric label="Сеток" value={data.networksTotal} icon={<Network size={18} />} />
-        <Metric label="Telegram в очереди" value={data.pendingTelegram} icon={<Inbox size={18} />} />
+        <Metric label="Размещений всего" value={data.placementsTotal} icon={<RadioTower size={18} />} />
+        <Metric label="Сегодня / ближайшие выходы" value={data.upcoming.length} icon={<Rows3 size={18} />} />
         <Metric label="Требует проверки" value={data.requiresCheck} icon={<AlertTriangle size={18} />} warn />
+        <Metric label="Telegram в очереди" value={data.pendingTelegram} icon={<Inbox size={18} />} />
       </section>
 
       <section className="ads-grid-two">
@@ -35,41 +34,45 @@ export default async function AdsDashboardPage() {
             <Link href="/ads/placements">все</Link>
           </div>
           <div className="ads-list">
-            {data.upcoming.map((placement) => (
+            {data.upcoming.map((placement: Awaited<ReturnType<typeof getAdsDashboard>>["upcoming"][number]) => (
               <div className="ads-list-row" key={placement.id}>
                 <div>
                   <strong>{placement.channel.name}</strong>
-                  <span>{placement.network?.name ?? "без сетки"} · {placement.platform}</span>
+                  <span>
+                    {placement.manager?.name ?? "без менеджера"} · {placement.platform}
+                  </span>
                 </div>
                 <div>
                   <b>{dateTime(placement.plannedAt)}</b>
-                  <span>{rub(placement.priceRub)}</span>
+                  <span>
+                    {rub(placement.priceRub)} · {placement.status}
+                  </span>
                 </div>
               </div>
             ))}
-            {!data.upcoming.length ? <p className="ads-empty">Ближайших размещений нет в базе.</p> : null}
+            {!data.upcoming.length ? <p className="ads-empty">Ближайших выходов нет.</p> : null}
           </div>
         </div>
 
         <div className="ads-panel">
           <div className="ads-panel-title">
-            <h2>Статусы</h2>
+            <h2>Требует внимания</h2>
           </div>
           <div className="ads-status-list">
-            {data.statusGroups.map((group) => (
+            {data.statusGroups.map((group: Awaited<ReturnType<typeof getAdsDashboard>>["statusGroups"][number]) => (
               <div key={group.status}>
                 <span>{group.status}</span>
                 <strong>{group._count}</strong>
               </div>
             ))}
-            {!data.statusGroups.length ? <p className="ads-empty">Импорт ещё не запускался.</p> : null}
+            {!data.statusGroups.length ? <p className="ads-empty">Проблемных статусов нет.</p> : null}
           </div>
         </div>
       </section>
 
       <section className="ads-panel">
         <div className="ads-panel-title">
-          <h2>Последние записи</h2>
+          <h2>Последние размещения</h2>
           <Link href="/ads/placements">таблица</Link>
         </div>
         <table className="ads-table">
@@ -77,18 +80,16 @@ export default async function AdsDashboardPage() {
             <tr>
               <th>Дата</th>
               <th>Канал</th>
-              <th>Сетка</th>
               <th>Менеджер</th>
               <th>Цена</th>
               <th>Статус</th>
             </tr>
           </thead>
           <tbody>
-            {data.recentPlacements.map((placement) => (
+            {data.recentPlacements.map((placement: Awaited<ReturnType<typeof getAdsDashboard>>["recentPlacements"][number]) => (
               <tr key={placement.id}>
                 <td>{dateTime(placement.plannedAt)}</td>
                 <td>{placement.channel.name}</td>
-                <td>{placement.network?.name ?? "—"}</td>
                 <td>{placement.manager?.name ?? "—"}</td>
                 <td>{rub(placement.priceRub)}</td>
                 <td><span className="ads-pill">{placement.status}</span></td>
