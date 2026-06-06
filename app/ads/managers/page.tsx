@@ -1,7 +1,42 @@
+import Link from "next/link";
 import { requireUser } from "@/lib/ads/auth";
+import { prisma } from "@/lib/ads/db";
+import { rub } from "@/lib/ads/format";
+
+type ManagerWithPlacements = Awaited<ReturnType<typeof prisma.manager.findMany>>[number];
+type ManagerPlacement = ManagerWithPlacements["placements"][number];
+type PlacementProofCount = { placementId: string; _count: number };
 
 export default async function ManagersPage() {
   await requireUser();
+  const managers: ManagerWithPlacements[] = await prisma.manager.findMany({
+    select: {
+      id: true,
+      name: true,
+      username: true,
+      placements: {
+        select: {
+          id: true,
+          priceRub: true,
+          status: true,
+        },
+      },
+    },
+    orderBy: { name: "asc" },
+  });
+  const placementIds = managers.flatMap((manager: ManagerWithPlacements) =>
+    manager.placements.map((placement: ManagerPlacement) => placement.id),
+  );
+  const proofCounts: PlacementProofCount[] = placementIds.length
+    ? await prisma.placementProof.groupBy({
+        by: ["placementId"],
+        where: { placementId: { in: placementIds } },
+        _count: true,
+      })
+    : [];
+  const proofMap = new Map<string, number>(
+    proofCounts.map((item: PlacementProofCount) => [item.placementId, item._count]),
+  );
 
   return (
     <>
@@ -9,9 +44,82 @@ export default async function ManagersPage() {
         <div>
           <p className="ads-kicker">Менеджеры</p>
           <h1>Менеджеры</h1>
-          <p>Раздел для контроля закупок по менеджерам: расходы, размещения, неподтверждённые выходы и оплаты.</p>
+          <p>Контроль закупок по менеджерам: расходы, размещения, подтверждения и проблемные выходы.</p>
         </div>
       </header>
+
+      {!managers.length ? <p className="ads-empty">Менеджеров пока нет.</p> : null}
+
+      <section className="ads-grid-two">
+        {managers.map((manager: ManagerWithPlacements) => {
+          const placementsCount = manager.placements.length;
+          const totalSpent = manager.placements.reduce(
+            (sum: number, placement: ManagerPlacement) => sum + (placement.priceRub ?? 0),
+            0,
+          );
+          const requiresCheck = manager.placements.filter(
+            (placement: ManagerPlacement) => placement.status === "требует проверки",
+          ).length;
+          const withoutProof = manager.placements.filter(
+            (placement: ManagerPlacement) => (proofMap.get(placement.id) ?? 0) === 0,
+          ).length;
+
+          return (
+            <article className="ads-panel" key={manager.id}>
+              <div className="ads-panel-title">
+                <h2>{manager.name}</h2>
+              </div>
+              <div className="ads-list">
+                {manager.username ? (
+                  <div className="ads-list-row">
+                    <div>
+                      <strong>Username</strong>
+                    </div>
+                    <div>
+                      <b>{manager.username}</b>
+                    </div>
+                  </div>
+                ) : null}
+                <div className="ads-list-row">
+                  <div>
+                    <strong>Потрачено</strong>
+                  </div>
+                  <div>
+                    <b>{rub(totalSpent)}</b>
+                  </div>
+                </div>
+                <div className="ads-list-row">
+                  <div>
+                    <strong>Размещений</strong>
+                  </div>
+                  <div>
+                    <b>{placementsCount}</b>
+                  </div>
+                </div>
+                <div className="ads-list-row">
+                  <div>
+                    <strong>Требует проверки</strong>
+                  </div>
+                  <div>
+                    <b>{requiresCheck}</b>
+                  </div>
+                </div>
+                <div className="ads-list-row">
+                  <div>
+                    <strong>Без proof</strong>
+                  </div>
+                  <div>
+                    <b>{withoutProof}</b>
+                  </div>
+                </div>
+              </div>
+              <Link className="ads-button" href={`/ads/placements?q=${encodeURIComponent(manager.name)}`}>
+                Открыть размещения
+              </Link>
+            </article>
+          );
+        })}
+      </section>
     </>
   );
 }
