@@ -30,6 +30,45 @@ export default async function AdsDashboardPage() {
       <section className="ads-grid-two">
         <div className="ads-panel">
           <div className="ads-panel-title">
+            <h2>Активная кампания</h2>
+            <Link href="/ads/campaigns">все кампании</Link>
+          </div>
+          {data.activeCampaign ? (
+            <div className="ads-list">
+              <div className="ads-list-row">
+                <div>
+                  <strong>{data.activeCampaign.name}</strong>
+                  <span>{data.activeCampaign.status}</span>
+                </div>
+                <div>
+                  <b>{rub(data.activeCampaign.budgetRub)}</b>
+                  <Link href={`/ads/campaigns/${data.activeCampaign.id}`}>Открыть</Link>
+                </div>
+              </div>
+              <div className="ads-list-row">
+                <div>
+                  <strong>Размещений</strong>
+                </div>
+                <div>
+                  <b>{data.placementsTotal}</b>
+                </div>
+              </div>
+              <div className="ads-list-row">
+                <div>
+                  <strong>Без proof</strong>
+                </div>
+                <div>
+                  <b>{data.withoutProof}</b>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <p className="ads-empty">Активная кампания не найдена.</p>
+          )}
+        </div>
+
+        <div className="ads-panel">
+          <div className="ads-panel-title">
             <h2>Ближайшие выходы</h2>
             <Link href="/ads/placements">все</Link>
           </div>
@@ -80,6 +119,7 @@ export default async function AdsDashboardPage() {
             <tr>
               <th>Дата</th>
               <th>Канал</th>
+              <th>Кампания</th>
               <th>Менеджер</th>
               <th>Цена</th>
               <th>Статус</th>
@@ -90,6 +130,7 @@ export default async function AdsDashboardPage() {
               <tr key={placement.id}>
                 <td>{dateTime(placement.plannedAt)}</td>
                 <td>{placement.channel.name}</td>
+                <td>{placement.campaign?.name ?? "Без кампании"}</td>
                 <td>{placement.manager?.name ?? "—"}</td>
                 <td>{rub(placement.priceRub)}</td>
                 <td><span className="ads-pill">{placement.status}</span></td>

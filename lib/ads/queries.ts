@@ -1,6 +1,10 @@
 import { prisma } from "./db";
 import { ensureCampaignFoundation } from "./campaigns";
 
+function buildProofSet(rows: Array<{ placementId: string }>) {
+  return new Set(rows.map((item) => item.placementId));
+}
+
 export async function getAdsDashboard() {
   await ensureCampaignFoundation();
   const today = new Date();
@@ -66,6 +70,142 @@ export async function getAdsDashboard() {
     recentPlacements,
     statusGroups,
     withoutProof: Math.max(placementsTotal - activeCampaignProofRows.length, 0),
+  };
+}
+
+export async function getCampaignsOverview() {
+  await ensureCampaignFoundation();
+
+  const campaigns = await prisma.campaign.findMany({
+    select: {
+      id: true,
+      name: true,
+      month: true,
+      year: true,
+      budgetRub: true,
+      status: true,
+      note: true,
+      placements: {
+        select: {
+          id: true,
+          channelId: true,
+          managerId: true,
+          status: true,
+          plannedAt: true,
+        },
+      },
+    },
+    orderBy: [{ year: "desc" }, { month: "desc" }],
+  });
+
+  const placementIds = campaigns.flatMap((campaign) => campaign.placements.map((placement) => placement.id));
+  const proofRows = placementIds.length
+    ? await prisma.placementProof.findMany({
+        where: { placementId: { in: placementIds } },
+        select: { placementId: true },
+        distinct: ["placementId"],
+      })
+    : [];
+  const proofSet = buildProofSet(proofRows);
+  const today = new Date();
+
+  return campaigns.map((campaign) => {
+    const placementsCount = campaign.placements.length;
+    const channelsCount = new Set(campaign.placements.map((placement) => placement.channelId)).size;
+    const managersCount = new Set(
+      campaign.placements
+        .map((placement) => placement.managerId)
+        .filter((managerId): managerId is string => Boolean(managerId)),
+    ).size;
+    const proofCount = campaign.placements.filter((placement) => proofSet.has(placement.id)).length;
+    const withoutProofCount = campaign.placements.filter((placement) => !proofSet.has(placement.id)).length;
+    const withoutStatusCount = campaign.placements.filter((placement) => !placement.status.trim()).length;
+    const requiresCheckCount = campaign.placements.filter((placement) => placement.status === "требует проверки").length;
+    const upcomingCount = campaign.placements.filter((placement) => placement.plannedAt && placement.plannedAt >= today).length;
+
+    return {
+      ...campaign,
+      placementsCount,
+      channelsCount,
+      managersCount,
+      proofCount,
+      withoutProofCount,
+      withoutStatusCount,
+      requiresCheckCount,
+      upcomingCount,
+    };
+  });
+}
+
+export async function getCampaignDetail(id: string) {
+  await ensureCampaignFoundation();
+
+  const campaign = await prisma.campaign.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      name: true,
+      month: true,
+      year: true,
+      budgetRub: true,
+      status: true,
+      note: true,
+    },
+  });
+
+  if (!campaign) return null;
+
+  const placements = await prisma.placement.findMany({
+    where: { campaignId: campaign.id },
+    include: { channel: true, manager: true, campaign: true, proofs: true, payments: true },
+    orderBy: [{ plannedAt: "asc" }, { createdAt: "desc" }],
+    take: 300,
+  });
+
+  const proofRows = placements.length
+    ? await prisma.placementProof.findMany({
+        where: { placementId: { in: placements.map((placement) => placement.id) } },
+        select: { placementId: true },
+        distinct: ["placementId"],
+      })
+    : [];
+  const proofSet = buildProofSet(proofRows);
+  const channelsCount = new Set(placements.map((placement) => placement.channelId)).size;
+  const managersCount = new Set(
+    placements
+      .map((placement) => placement.managerId)
+      .filter((managerId): managerId is string => Boolean(managerId)),
+  ).size;
+  const proofCount = placements.filter((placement) => proofSet.has(placement.id)).length;
+  const withoutProof = placements.filter((placement) => !proofSet.has(placement.id));
+  const withoutStatus = placements.filter((placement) => !placement.status.trim());
+  const requiresCheck = placements.filter((placement) => placement.status === "требует проверки");
+  const today = new Date();
+  const upcomingPlacements = placements
+    .filter((placement) => placement.plannedAt && placement.plannedAt >= today)
+    .sort((a, b) => (a.plannedAt?.getTime() ?? 0) - (b.plannedAt?.getTime() ?? 0))
+    .slice(0, 10);
+  const recentPlacements = [...placements]
+    .sort((a, b) => (b.plannedAt?.getTime() ?? 0) - (a.plannedAt?.getTime() ?? 0))
+    .slice(0, 10);
+
+  return {
+    campaign,
+    placements,
+    proofSet,
+    stats: {
+      placementsCount: placements.length,
+      channelsCount,
+      managersCount,
+      proofCount,
+      withoutProofCount: withoutProof.length,
+      withoutStatusCount: withoutStatus.length,
+      requiresCheckCount: requiresCheck.length,
+    },
+    withoutProof,
+    withoutStatus,
+    upcomingPlacements,
+    recentPlacements,
   };
 }
 

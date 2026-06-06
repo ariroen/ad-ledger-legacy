@@ -40,6 +40,9 @@ export default async function PlacementsPage({
           <h1>Размещения</h1>
           <p>Рабочая таблица закупленных рекламных выходов: даты, каналы, менеджеры, статусы, подтверждения и оплаты.</p>
         </div>
+        <Link className="ads-button" href="/ads/campaigns">
+          К кампаниям
+        </Link>
         <form className="ads-filter">
           <select name="campaignId" defaultValue={params.campaignId ?? ""}>
             <option value="">Все кампании</option>
@@ -72,6 +75,7 @@ export default async function PlacementsPage({
           <thead>
             <tr>
               <th>Дата</th>
+              <th>Кампания</th>
               <th>Канал</th>
               <th>Менеджер</th>
               <th>Платформа</th>
@@ -85,6 +89,13 @@ export default async function PlacementsPage({
             {placements.map((placement: PlacementItem) => (
               <tr key={placement.id}>
                 <td>{dateTime(placement.plannedAt)}</td>
+                <td>
+                  {placement.campaign ? (
+                    <Link href={`/ads/campaigns/${placement.campaign.id}`}>{placement.campaign.name}</Link>
+                  ) : (
+                    "Без кампании"
+                  )}
+                </td>
                 <td>
                   {placement.channel.name}
                 </td>
@@ -104,7 +115,7 @@ export default async function PlacementsPage({
             ))}
             {!placements.length ? (
               <tr>
-                <td colSpan={8} className="ads-empty">Размещений пока нет.</td>
+                <td colSpan={9} className="ads-empty">Размещений пока нет.</td>
               </tr>
             ) : null}
           </tbody>
