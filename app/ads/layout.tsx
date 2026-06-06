@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BarChart3, BriefcaseBusiness, CalendarDays, CreditCard, Settings, Table2, Users } from "lucide-react";
+import { BarChart3, BriefcaseBusiness, CalendarDays, CreditCard, Settings, Table2, Upload, Users } from "lucide-react";
 import { getCurrentUser } from "@/lib/ads/auth";
 
 const nav = [
@@ -7,6 +7,7 @@ const nav = [
   { href: "/ads/campaigns", label: "Кампании", icon: BriefcaseBusiness },
   { href: "/ads/calendar", label: "Выходы", icon: CalendarDays },
   { href: "/ads/placements", label: "Размещения", icon: Table2 },
+  { href: "/ads/import", label: "Импорт", icon: Upload },
   { href: "/ads/managers", label: "Менеджеры", icon: Users },
   { href: "/ads/finance", label: "Финансы", icon: CreditCard },
   { href: "/ads/reports", label: "Отчёты", icon: CalendarDays },

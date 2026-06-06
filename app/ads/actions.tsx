@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Download, FileDown, Loader2, RefreshCw } from "lucide-react";
+import Link from "next/link";
 
 export function ImportControls() {
   const [state, setState] = useState<"idle" | "loading" | "done" | "error">("idle");
@@ -19,6 +20,9 @@ export function ImportControls() {
         {state === "loading" ? <Loader2 size={16} className="ads-spin" /> : <RefreshCw size={16} />}
         Импорт Excel + Telegram
       </button>
+      <Link className="ads-button" href="/ads/import">
+        Ручной импорт
+      </Link>
       <a className="ads-button" href="/api/ads/export/excel">
         <Download size={16} />
         Excel
