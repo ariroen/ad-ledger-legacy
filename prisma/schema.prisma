@@ -1,0 +1,297 @@
+generator client {
+  provider   = "prisma-client-js"
+  engineType = "binary"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  role         String   @default("manager")
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  auditLogs AuditLog[]
+  proposedChangesCreated  ProposedChange[] @relation("ProposedChangeCreatedBy")
+  proposedChangesApproved ProposedChange[] @relation("ProposedChangeApprovedBy")
+  importRuns ImportRun[]
+}
+
+model Manager {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  username  String?
+  source    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  placements Placement[]
+}
+
+model Network {
+  id                String   @id @default(cuid())
+  name              String
+  platform          String
+  priceRub          Int?
+  format            String?
+  networkUrl        String?
+  compositionStatus String   @default("active")
+  source            String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  channels   Channel[]
+  placements Placement[]
+  payments   Payment[]
+
+  @@unique([name, platform])
+  @@index([platform])
+}
+
+model Channel {
+  id             String   @id @default(cuid())
+  name           String
+  normalizedName String
+  platform       String
+  url            String?
+  statsUrl       String?
+  source         String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  networkId String?
+  network   Network? @relation(fields: [networkId], references: [id], onDelete: SetNull)
+
+  placements Placement[]
+
+  @@unique([platform, normalizedName, url])
+  @@index([platform, normalizedName])
+}
+
+model Placement {
+  id             String    @id @default(cuid())
+  platform       String
+  format         String?
+  priceRub       Int?
+  plannedAt      DateTime?
+  actualAt       DateTime?
+  postNumber     String?
+  status         String    @default("planned")
+  postUrl        String?
+  referralUrl    String?
+  note           String?
+  sourceFile     String?
+  sourceSheet    String?
+  sourceRow      Int?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  channelId String
+  channel   Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  networkId String?
+  network   Network? @relation(fields: [networkId], references: [id], onDelete: SetNull)
+
+  managerId String?
+  manager   Manager? @relation(fields: [managerId], references: [id], onDelete: SetNull)
+
+  proofs   PlacementProof[]
+  payments Payment[]
+  importRunItems ImportRunItem[]
+
+  @@unique([channelId, plannedAt, platform, networkId, postNumber])
+  @@index([plannedAt])
+  @@index([status])
+}
+
+model PlacementProof {
+  id          String   @id @default(cuid())
+  kind        String
+  url         String?
+  filePath    String?
+  note        String?
+  createdAt   DateTime @default(now())
+
+  placementId String
+  placement   Placement @relation(fields: [placementId], references: [id], onDelete: Cascade)
+}
+
+model TelegramMessage {
+  id                String   @id @default(cuid())
+  telegramMessageId Int
+  chatId            String
+  senderName        String?
+  senderUsername    String?
+  forwardedFrom     String?
+  text              String?
+  receivedAt        DateTime
+  rawJson           String
+  reviewStatus      String   @default("pending")
+  suggestedActions  String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  attachments Attachment[]
+  proposedChanges ProposedChange[]
+
+  @@unique([telegramMessageId, chatId])
+  @@index([reviewStatus])
+}
+
+model Attachment {
+  id        String   @id @default(cuid())
+  kind      String
+  fileName  String?
+  filePath  String?
+  mimeType  String?
+  fileId    String?
+  createdAt DateTime @default(now())
+
+  telegramMessageId String?
+  telegramMessage   TelegramMessage? @relation(fields: [telegramMessageId], references: [id], onDelete: Cascade)
+
+  invoiceId String?
+  invoice   Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+}
+
+model Invoice {
+  id          String    @id @default(cuid())
+  number      String?
+  issuedAt    DateTime?
+  contractor  String?
+  amountRub   Int?
+  status      String    @default("expected")
+  filePath    String?
+  note        String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  attachments Attachment[]
+  payments    Payment[]
+  proposedChanges ProposedChange[]
+}
+
+model Payment {
+  id          String    @id @default(cuid())
+  amountRub   Int
+  paidAt      DateTime?
+  method      String?
+  status      String    @default("planned")
+  note        String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  invoiceId String?
+  invoice   Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+
+  placementId String?
+  placement   Placement? @relation(fields: [placementId], references: [id], onDelete: SetNull)
+
+  networkId String?
+  network   Network? @relation(fields: [networkId], references: [id], onDelete: SetNull)
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String?
+  action    String
+  entity    String
+  entityId  String?
+  before    String?
+  after     String?
+  createdAt DateTime @default(now())
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([entity, entityId])
+}
+
+model ProposedChange {
+  id                  String    @id @default(cuid())
+  sourceType          String
+  sourceId            String?
+  actionType          String
+  status              String    @default("pending")
+  payloadJson         String
+  confidence          Float?
+  requiresCheckReason String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  appliedAt           DateTime?
+
+  createdById String?
+  createdBy   User? @relation("ProposedChangeCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  approvedById String?
+  approvedBy   User? @relation("ProposedChangeApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
+
+  telegramMessageId String?
+  telegramMessage   TelegramMessage? @relation(fields: [telegramMessageId], references: [id], onDelete: Cascade)
+
+  invoiceId String?
+  invoice   Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([sourceType, sourceId])
+  @@index([actionType])
+}
+
+model ImportRun {
+  id              String   @id @default(cuid())
+  source          String
+  status          String   @default("completed")
+  addedCount      Int      @default(0)
+  updatedCount    Int      @default(0)
+  skippedCount    Int      @default(0)
+  requiresCheckCount Int   @default(0)
+  errorCount      Int      @default(0)
+  summaryJson     String?
+  createdAt       DateTime @default(now())
+
+  actorId String?
+  actor   User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  items ImportRunItem[]
+
+  @@index([createdAt])
+  @@index([source])
+}
+
+model ImportRunItem {
+  id                  String   @id @default(cuid())
+  entity              String
+  entityId            String?
+  action              String
+  sourceSheet         String?
+  sourceRow           Int?
+  message             String?
+  requiresCheck       Boolean  @default(false)
+  requiresCheckReason String?
+  createdAt           DateTime @default(now())
+
+  importRunId String
+  importRun   ImportRun @relation(fields: [importRunId], references: [id], onDelete: Cascade)
+
+  placementId String?
+  placement   Placement? @relation(fields: [placementId], references: [id], onDelete: SetNull)
+
+  @@index([entity, entityId])
+  @@index([requiresCheck])
+}
+
+model BackupSnapshot {
+  id        String   @id @default(cuid())
+  kind      String
+  status    String   @default("created")
+  filePath  String
+  note      String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
