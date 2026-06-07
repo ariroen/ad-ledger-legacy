@@ -1,11 +1,15 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
+import { AttachmentList } from "@/app/ads/AttachmentList";
+import { AttachmentUploader } from "@/app/ads/AttachmentUploader";
+import { ReferralLinksList } from "@/app/ads/ReferralLinksList";
 import { requireUser } from "@/lib/ads/auth";
 import { prisma } from "@/lib/ads/db";
 import { dateTime, rub } from "@/lib/ads/format";
 import { getCampaignsForSelect } from "@/lib/ads/queries";
 import { addPlacementProof, deletePlacement, updatePlacement } from "@/lib/ads/placements-service";
+import { createReferralLink } from "@/lib/ads/referrals";
 
 type PlacementDetailPageProps = {
   params: Promise<{ id: string }>;
@@ -58,6 +62,18 @@ export default async function PlacementDetailPage({ params }: PlacementDetailPag
           },
           orderBy: { createdAt: "desc" },
         },
+        attachments: {
+          select: {
+            id: true,
+            kind: true,
+            fileName: true,
+            mimeType: true,
+            fileSize: true,
+            source: true,
+            createdAt: true,
+          },
+          orderBy: { createdAt: "desc" },
+        },
         payments: {
           select: {
             id: true,
@@ -66,6 +82,32 @@ export default async function PlacementDetailPage({ params }: PlacementDetailPag
             paidAt: true,
             method: true,
             note: true,
+          },
+          orderBy: { createdAt: "desc" },
+        },
+        referralLinks: {
+          select: {
+            id: true,
+            code: true,
+            sourceUrl: true,
+            status: true,
+            clicksCount: true,
+            createdAt: true,
+            placement: {
+              select: {
+                plannedAt: true,
+              },
+            },
+            events: {
+              select: {
+                id: true,
+                createdAt: true,
+                userAgent: true,
+                referrer: true,
+              },
+              orderBy: { createdAt: "desc" },
+              take: 5,
+            },
           },
           orderBy: { createdAt: "desc" },
         },
@@ -116,6 +158,18 @@ export default async function PlacementDetailPage({ params }: PlacementDetailPag
 
     await deletePlacement(id);
     redirect("/ads/placements");
+  }
+
+  async function createReferralLinkAction(formData: FormData) {
+    "use server";
+
+    await createReferralLink({
+      placementId: id,
+      sourceUrl: String(formData.get("sourceUrl") || ""),
+      status: String(formData.get("status") || "active"),
+    });
+
+    redirect(`/ads/placements/${id}`);
   }
 
   const toDateTimeLocal = (value: Date | null) => {
@@ -241,6 +295,31 @@ export default async function PlacementDetailPage({ params }: PlacementDetailPag
           <input name="note" placeholder="Комментарий" />
           <button className="ads-button ads-button-primary" type="submit">Добавить подтверждение</button>
         </form>
+      </section>
+
+      <AttachmentUploader campaignId={currentPlacement.campaign?.id ?? null} placementId={currentPlacement.id} />
+
+      <section className="ads-panel">
+        <div className="ads-panel-title">
+          <h2>Файлы</h2>
+        </div>
+        <AttachmentList attachments={currentPlacement.attachments} emptyText="Файлов пока нет." />
+      </section>
+
+      <section className="ads-panel">
+        <div className="ads-panel-title">
+          <h2>Реферальные ссылки</h2>
+        </div>
+        <form className="ads-filter" action={createReferralLinkAction}>
+          <input name="sourceUrl" placeholder="Исходная ссылка" />
+          <select name="status" defaultValue="active">
+            <option value="active">active</option>
+            <option value="paused">paused</option>
+            <option value="archived">archived</option>
+          </select>
+          <button className="ads-button ads-button-primary" type="submit">Добавить ссылку</button>
+        </form>
+        <ReferralLinksList links={currentPlacement.referralLinks} emptyText="Реферальных ссылок пока нет." />
       </section>
 
       <section className="ads-panel">

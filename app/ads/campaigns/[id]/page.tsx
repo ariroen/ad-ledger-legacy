@@ -1,9 +1,13 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
+import { AttachmentList } from "@/app/ads/AttachmentList";
+import { AttachmentUploader } from "@/app/ads/AttachmentUploader";
+import { ReferralLinksList } from "@/app/ads/ReferralLinksList";
 import { requireUser } from "@/lib/ads/auth";
 import { dateTime, rub } from "@/lib/ads/format";
 import { getCampaignDetail } from "@/lib/ads/queries";
+import { createReferralLink } from "@/lib/ads/referrals";
 
 type CampaignDetailPageProps = {
   params: Promise<{ id: string }>;
@@ -15,6 +19,18 @@ export default async function CampaignDetailPage({ params }: CampaignDetailPageP
   const data = await getCampaignDetail(id);
   if (!data) notFound();
   const { campaign, placements, proofSet, stats, withoutProof, withoutStatus, upcomingPlacements, recentPlacements } = data;
+
+  async function createReferralLinkAction(formData: FormData) {
+    "use server";
+
+    await createReferralLink({
+      campaignId: campaign.id,
+      sourceUrl: String(formData.get("sourceUrl") || ""),
+      status: String(formData.get("status") || "active"),
+    });
+
+    redirect(`/ads/campaigns/${campaign.id}`);
+  }
 
   return (
     <>
@@ -49,6 +65,31 @@ export default async function CampaignDetailPage({ params }: CampaignDetailPageP
           <div className="ads-list-row"><div><strong>Статус</strong></div><div><b>{campaign.status}</b></div></div>
           <div className="ads-list-row"><div><strong>Заметка</strong></div><div><b>{campaign.note ?? "—"}</b></div></div>
         </div>
+      </section>
+
+      <AttachmentUploader campaignId={campaign.id} />
+
+      <section className="ads-panel">
+        <div className="ads-panel-title">
+          <h2>Файлы кампании</h2>
+        </div>
+        <AttachmentList attachments={campaign.attachments} emptyText="Файлов кампании пока нет." />
+      </section>
+
+      <section className="ads-panel">
+        <div className="ads-panel-title">
+          <h2>Реферальные ссылки</h2>
+        </div>
+        <form className="ads-filter" action={createReferralLinkAction}>
+          <input name="sourceUrl" placeholder="Исходная ссылка" />
+          <select name="status" defaultValue="active">
+            <option value="active">active</option>
+            <option value="paused">paused</option>
+            <option value="archived">archived</option>
+          </select>
+          <button className="ads-button ads-button-primary" type="submit">Добавить ссылку</button>
+        </form>
+        <ReferralLinksList links={campaign.referralLinks} emptyText="Реферальных ссылок кампании пока нет." />
       </section>
 
       <section className="ads-panel">

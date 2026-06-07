@@ -297,6 +297,8 @@ export async function deletePlacement(id: string) {
   if (!placement) throw new Error("Placement not found");
 
   await prisma.placementProof.deleteMany({ where: { placementId: id } });
+  await prisma.attachment.deleteMany({ where: { placementId: id } });
+  await prisma.referralLink.deleteMany({ where: { placementId: id } });
   await prisma.payment.updateMany({
     where: { placementId: id },
     data: { placementId: null },

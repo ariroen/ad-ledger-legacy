@@ -150,6 +150,44 @@ export async function getCampaignDetail(id: string) {
       budgetRub: true,
       status: true,
       note: true,
+      attachments: {
+        select: {
+          id: true,
+          kind: true,
+          fileName: true,
+          mimeType: true,
+          fileSize: true,
+          source: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: "desc" },
+      },
+      referralLinks: {
+        select: {
+          id: true,
+          code: true,
+          sourceUrl: true,
+          status: true,
+          clicksCount: true,
+          createdAt: true,
+          placement: {
+            select: {
+              plannedAt: true,
+            },
+          },
+          events: {
+            select: {
+              id: true,
+              createdAt: true,
+              userAgent: true,
+              referrer: true,
+            },
+            orderBy: { createdAt: "desc" },
+            take: 5,
+          },
+        },
+        orderBy: { createdAt: "desc" },
+      },
     },
   });
 
@@ -333,6 +371,26 @@ export async function getChannelDetail(id: string) {
     where: { id },
     include: {
       network: true,
+      referralLinks: {
+        include: {
+          placement: {
+            select: {
+              plannedAt: true,
+            },
+          },
+          events: {
+            select: {
+              id: true,
+              createdAt: true,
+              userAgent: true,
+              referrer: true,
+            },
+            orderBy: { createdAt: "desc" },
+            take: 5,
+          },
+        },
+        orderBy: { createdAt: "desc" },
+      },
       placements: {
         include: { manager: true, network: true, proofs: true, payments: true },
         orderBy: { plannedAt: "desc" },

@@ -46,6 +46,8 @@ model Campaign {
   updatedAt DateTime @updatedAt
 
   placements Placement[]
+  attachments Attachment[]
+  referralLinks ReferralLink[]
 
   @@index([status])
   @@index([year, month])
@@ -86,6 +88,7 @@ model Channel {
   network   Network? @relation(fields: [networkId], references: [id], onDelete: SetNull)
 
   placements Placement[]
+  referralLinks ReferralLink[]
 
   @@unique([platform, normalizedName, url])
   @@index([platform, normalizedName])
@@ -122,7 +125,9 @@ model Placement {
   campaign   Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
 
   proofs   PlacementProof[]
+  attachments Attachment[]
   payments Payment[]
+  referralLinks ReferralLink[]
   importRunItems ImportRunItem[]
 
   @@unique([channelId, plannedAt, platform, networkId, postNumber])
@@ -172,6 +177,8 @@ model Attachment {
   filePath  String?
   mimeType  String?
   fileId    String?
+  fileSize  Int?
+  source    String?
   createdAt DateTime @default(now())
 
   telegramMessageId String?
@@ -179,6 +186,15 @@ model Attachment {
 
   invoiceId String?
   invoice   Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+
+  campaignId String?
+  campaign   Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+
+  placementId String?
+  placement   Placement? @relation(fields: [placementId], references: [id], onDelete: SetNull)
+
+  @@index([campaignId])
+  @@index([placementId])
 }
 
 model Invoice {
@@ -216,6 +232,45 @@ model Payment {
 
   networkId String?
   network   Network? @relation(fields: [networkId], references: [id], onDelete: SetNull)
+}
+
+model ReferralLink {
+  id         String   @id @default(cuid())
+  code       String   @unique
+  sourceUrl  String
+  status     String   @default("active")
+  clicksCount Int     @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  channelId String?
+  channel   Channel? @relation(fields: [channelId], references: [id], onDelete: SetNull)
+
+  campaignId String?
+  campaign   Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+
+  placementId String?
+  placement   Placement? @relation(fields: [placementId], references: [id], onDelete: SetNull)
+
+  events ReferralEvent[]
+
+  @@index([channelId])
+  @@index([campaignId])
+  @@index([placementId])
+  @@index([status])
+}
+
+model ReferralEvent {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  userAgent   String?
+  referrer    String?
+  ipHash      String?
+
+  referralLinkId String
+  referralLink   ReferralLink @relation(fields: [referralLinkId], references: [id], onDelete: Cascade)
+
+  @@index([referralLinkId, createdAt])
 }
 
 model AuditLog {
